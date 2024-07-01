@@ -1,37 +1,11 @@
-enum TokenKind {
-  LeftParenthese = "(",
-  RightParenthese = ")",
-  leftBrace = "{",
-  rightBrace = "}",
-  Equal = "=",
-  Plus = "+",
+import { Token, TokenKind, CharacterTypeEnum } from "./token";
 
-  Identifier = "(Identifier)",
-  Number = "(Number)",
-  Keyword = "(Keyword)",
+import type {
+  AST, SourceFile, Statement, FunctionBody, ReturnStatement, PlusExpression, Value,
+} from "./type/ast";
+import type { ScanReturnType } from "./type/token";
 
-  EOF = "(EOF)",
-}
-
-class Token {
-  constructor(
-    public kind: TokenKind,
-    private pos: number,
-    private end: number,
-    public source: string
-  ) { }
-}
-
-interface ScanReturnType {
-  characters: string;
-  type: CharacterTypeEnum;
-}
-
-enum CharacterTypeEnum {
-  Identifier,
-  Keyword,
-  Number,
-}
+export * from './type/ast';
 
 export class Parser {
   private pos: number = 0;
@@ -42,7 +16,7 @@ export class Parser {
     this.end = code.length;
   }
 
-  public parse() {
+  public parse(): AST {
     this.nextToken();
     const sourceFile = this.parseSourceFile();
     this.assert(TokenKind.EOF);
@@ -52,7 +26,7 @@ export class Parser {
     };
   }
 
-  private parseSourceFile() {
+  private parseSourceFile(): SourceFile {
     const statements = this.parseStatementList();
 
     return {
@@ -60,7 +34,7 @@ export class Parser {
     };
   }
 
-  private parseStatementList() {
+  private parseStatementList(): Statement[] {
     const statements = [];
 
     while (true) {
@@ -79,7 +53,7 @@ export class Parser {
     return statements;
   }
 
-  private parseStatement() {
+  private parseStatement(): Statement {
     // 根据后面一个 token 来判断，是 变量定义 还是 函数调用
     switch (this.token.kind) {
       case TokenKind.Keyword: {  // 变量定义
@@ -150,7 +124,7 @@ export class Parser {
     };
   }
 
-  private parseFunctionBody() {
+  private parseFunctionBody(): FunctionBody {
     const statements = this.parseStatementList();
     this.assert(TokenKind.Keyword, 'return');
 
@@ -161,7 +135,7 @@ export class Parser {
     };
   }
 
-  private parseReturnStatement() {
+  private parseReturnStatement(): ReturnStatement {
     this.nextToken();
     this.assert([TokenKind.Identifier, TokenKind.Number]);
     const value = this.token;
@@ -183,9 +157,11 @@ export class Parser {
         this.nextToken();
         this.assert(TokenKind.rightBrace);
         return {
-          left: value,
-          right,
-        }
+          PlusExpression: {
+            left: value,
+            right,
+          }
+        };
       }
     }
 
@@ -196,7 +172,7 @@ export class Parser {
     };
   }
 
-  private parsePlusExpression() {
+  private parsePlusExpression(): PlusExpression {
     const left = this.token;
 
     this.nextToken();
@@ -212,7 +188,7 @@ export class Parser {
     };
   }
 
-  private parseValue() {
+  private parseValue(): Value {
     switch (this.token.kind) {
       case TokenKind.Number: {
         const number = this.token;
