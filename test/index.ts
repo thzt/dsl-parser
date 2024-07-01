@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import { describe, it } from "node:test";
 
 import { Parser } from "../src/index";
 

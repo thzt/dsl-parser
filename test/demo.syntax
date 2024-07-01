@@ -1,12 +1,20 @@
 SourceFile = StatementList
 StatementList = Statement | Statement StatementList
+
 Statement = VariableDeclaration | FunctionDeclaration
+
 VariableDeclaration = 'let' Identifier '=' Value
 Value = NUMBER | CallExpression
+
 FunctionDeclaration = Identifier '(' Identifier ')' '{' FunctionBody '}'
 FunctionBody = StatementList ReturnStatement
-ReturnStatement = 'return' PlusExpression
+ReturnStatement = 'return' ReturnExpression
+
+ReturnExpression = Identifier | PlusExpression
+
 PlusExpression = Identifier '+' Identifier
 CallExpression = Identifier '(' Identifier ')'
 
-Identifier = [a-z]+ | NUMBER
+Identifier = [a-z]+
+Number = [0-9]+
+Keyword = 'let' | 'return'

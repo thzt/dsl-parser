@@ -3,12 +3,14 @@ enum TokenKind {
   RightParenthese = ")",
   leftBrace = "{",
   rightBrace = "}",
-  Identifier = "(Identifier)",
-  Keyword = "(Keyword)",
-  Number = "(Number)",
-  EOF = "(EOF)",
   Equal = "=",
   Plus = "+",
+
+  Identifier = "(Identifier)",
+  Number = "(Number)",
+  Keyword = "(Keyword)",
+
+  EOF = "(EOF)",
 }
 
 class Token {
@@ -31,20 +33,6 @@ enum CharacterTypeEnum {
   Number,
 }
 
-/**
-  SourceFile = StatementList
-  StatementList = Statement | Statement StatementList
-  Statement = VariableDeclaration | FunctionDeclaration
-  VariableDeclaration = 'let' Identifier '=' Value
-  Value = NUMBER | CallExpression
-  FunctionDeclaration = Identifier '(' Identifier ')' '{' FunctionBody '}'
-  FunctionBody = StatementList ReturnStatement
-  ReturnStatement = 'return' PlusExpression
-  PlusExpression = Identifier '+' Identifier
-  CallExpression = Identifier '(' Identifier ')'
-
-  Identifier = [a-z]+ | NUMBER
- */
 export class Parser {
   private pos: number = 0;
   private readonly end: number;
@@ -76,21 +64,23 @@ export class Parser {
     const statements = [];
 
     while (true) {
-      const statement = this.parseStatement();
-      statements.push(statement);
-
-      if (this.token.kind === TokenKind.EOF) {
+      // 根据后面一个 token 来判断
+      if (this.token.kind === TokenKind.EOF) {  // 最外层
         break;
       }
       if (this.token.kind === TokenKind.Keyword && this.token.source === 'return') { // 函数体
         break;
       }
+
+      const statement = this.parseStatement();
+      statements.push(statement);
     }
 
     return statements;
   }
 
   private parseStatement() {
+    // 根据后面一个 token 来判断，是 变量定义 还是 函数调用
     switch (this.token.kind) {
       case TokenKind.Keyword: {  // 变量定义
         this.assert(TokenKind.Keyword, 'let');
@@ -149,8 +139,6 @@ export class Parser {
 
     this.nextToken();
     const functionBody = this.parseFunctionBody();
-
-    this.nextToken();
     this.assert(TokenKind.rightBrace);
 
     this.nextToken();
@@ -175,7 +163,32 @@ export class Parser {
 
   private parseReturnStatement() {
     this.nextToken();
-    this.assert(TokenKind.Identifier);
+    this.assert([TokenKind.Identifier, TokenKind.Number]);
+    const value = this.token;
+
+    // 还要判断变量或者数字后面，是不是加号
+    this.nextToken();
+    this.assert([TokenKind.rightBrace, TokenKind.Plus]);
+    switch (this.token.kind) {
+      // 如果是右花括号，语句就结束了
+      case TokenKind.rightBrace: {
+        return value;
+      }
+      // 如果是加号，那就再向后取一个 token
+      case TokenKind.Plus: {
+        this.nextToken();
+        this.assert([TokenKind.Identifier, TokenKind.Number]);
+        const right = this.token;
+
+        this.nextToken();
+        this.assert(TokenKind.rightBrace);
+        return {
+          left: value,
+          right,
+        }
+      }
+    }
+
     const plusExpr = this.parsePlusExpression();
 
     return {
