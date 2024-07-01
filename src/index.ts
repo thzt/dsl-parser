@@ -59,7 +59,9 @@ export class Parser {
     const sourceFile = this.parseSourceFile();
     this.assert(TokenKind.EOF);
 
-    return sourceFile;
+    return {
+      SourceFile: sourceFile,
+    };
   }
 
   private parseSourceFile() {
