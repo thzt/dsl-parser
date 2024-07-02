@@ -13,7 +13,8 @@ export interface VariableDeclaration {
     value: Value;
   };
 }
-export type Value = Token | {
+export type Value = Token | CallExpression;
+export interface CallExpression {
   CallExpression: {
     name: Token;
     argument: Token;
@@ -30,11 +31,11 @@ export interface FunctionBody {
   StatementList: Statement[];
   ReturnStatement: ReturnStatement
 }
-export type ReturnStatement = Token | {
-  PlusExpression: PlusExpression
-};
+export type ReturnStatement = Token | PlusExpression;
 export interface PlusExpression {
-  left: Token;
-  right: Token;
+  PlusExpression: {
+    left: Token;
+    right: Token;
+  }
 }
 

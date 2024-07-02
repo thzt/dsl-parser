@@ -166,10 +166,7 @@ export class Parser {
     }
 
     const plusExpr = this.parsePlusExpression();
-
-    return {
-      PlusExpression: plusExpr,
-    };
+    return plusExpr;
   }
 
   private parsePlusExpression(): PlusExpression {
@@ -183,8 +180,10 @@ export class Parser {
     const right = this.token;
 
     return {
-      left,
-      right,
+      PlusExpression: {
+        left,
+        right,
+      },
     };
   }
 
@@ -222,8 +221,6 @@ export class Parser {
 
     this.nextToken();
     this.assert(TokenKind.RightParenthese);
-
-    this.nextToken();
 
     return {
       name: functionName,
