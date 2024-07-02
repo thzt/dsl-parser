@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { Parser } from "../src/index";
+import type { AST } from '../src/index'
 
 describe("test case", () => {
   const filePath = path.resolve("./test/demo.dsl");
@@ -11,7 +12,7 @@ describe("test case", () => {
     it("result 1", () => {
       debugger;
       const parser = new Parser(code);
-      const ast = parser.parse();
+      const ast: AST = parser.parse();
       debugger;
     });
   });
