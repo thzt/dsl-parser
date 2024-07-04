@@ -1,41 +1,63 @@
 import type { Token } from "../token";
 
+export interface Offset {
+  pos: number;
+  end: number;
+}
+
 export interface AST {
-  SourceFile: SourceFile
+  SourceFile: SourceFile;
+  offset: Offset;
 }
 export interface SourceFile {
-  StatementList: Statement[]
+  StatementList: Statement[];
+  offset: Offset;
 }
 export type Statement = VariableDeclaration | FunctionDeclaration
 export interface VariableDeclaration {
   VariableDeclaration: {
-    name: Token;
-    value: Value;
+    Keyword: Token;
+    VariableName: Token;
+    VariableValue: VariableValue;
+    offset: Offset;
   };
 }
-export type Value = Token | CallExpression;
+export type VariableValue = Literal | CallExpression;
+export interface Literal {
+  Literal: Token;
+  offset: Offset;
+}
 export interface CallExpression {
   CallExpression: {
-    name: Token;
-    argument: Token;
-  }
+    FunctionName: Token;
+    FunctionArgument: Token;
+    offset: Offset;
+  };
 }
 export interface FunctionDeclaration {
   FunctionDeclaration: {
-    name: Token;
-    parameter: Token;
-    body: FunctionBody
+    FunctionName: Token;
+    FunctionParameter: Token;
+    FunctionBody: FunctionBody;
+    offset: Offset;
   };
 }
 export interface FunctionBody {
   StatementList: Statement[];
-  ReturnStatement: ReturnStatement
+  ReturnStatement: ReturnStatement;
+  offset: Offset;
 }
-export type ReturnStatement = Token | PlusExpression;
+export class ReturnStatement {
+  Keyword: Token;
+  ReturnValue: ReturnValue;
+  offset: Offset;
+}
+export type ReturnValue = Literal | PlusExpression;
 export interface PlusExpression {
   PlusExpression: {
-    left: Token;
-    right: Token;
-  }
+    Left: Token;
+    Right: Token;
+    offset: Offset;
+  },
 }
 

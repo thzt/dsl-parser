@@ -1,8 +1,8 @@
 export class Token {
   constructor(
     public kind: TokenKind,
-    private pos: number,
-    private end: number,
+    public pos: number,
+    public end: number,
     public source: string
   ) { }
 }

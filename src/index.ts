@@ -1,7 +1,7 @@
 import { Token, TokenKind, CharacterTypeEnum } from "./token";
 
 import type {
-  AST, SourceFile, Statement, FunctionBody, ReturnStatement, PlusExpression, Value,
+  AST, SourceFile, Statement, FunctionBody, ReturnStatement, VariableValue, CallExpression, VariableDeclaration, FunctionDeclaration,
 } from "./type/ast";
 import type { ScanReturnType } from "./type/token";
 
@@ -23,14 +23,24 @@ export class Parser {
 
     return {
       SourceFile: sourceFile,
+      offset: {
+        pos: 0, // 包含空白字符
+        end: this.end, // 包含空白字符
+      },
     };
   }
 
   private parseSourceFile(): SourceFile {
+    const startPos = this.token.pos;  // let 或者 函数名
     const statements = this.parseStatementList();
+    const endPos = this.token.end;
 
     return {
       StatementList: statements,
+      offset: {
+        pos: startPos,
+        end: endPos,
+      }
     };
   }
 
@@ -58,16 +68,12 @@ export class Parser {
     switch (this.token.kind) {
       case TokenKind.Keyword: {  // 变量定义
         this.assert(TokenKind.Keyword, 'let');
-        const variable = this.parseVariableDeclaration();
-        return {
-          VariableDeclaration: variable,
-        };
+        const variableDeclaration = this.parseVariableDeclaration();
+        return variableDeclaration;
       }
       case TokenKind.Identifier: {  // 函数调用
-        const func = this.parseFunctionDeclaration();
-        return {
-          FunctionDeclaration: func
-        }
+        const functionDeclaration = this.parseFunctionDeclaration();
+        return functionDeclaration;
       }
       default: {
         throw new Error(`语句只能是 变量定义 或者 函数调用`);
@@ -75,7 +81,10 @@ export class Parser {
     }
   }
 
-  private parseVariableDeclaration() {
+  private parseVariableDeclaration(): VariableDeclaration {
+    this.assert(TokenKind.Keyword, 'let');
+    const keyword = this.token;
+
     this.nextToken();
     this.assert(TokenKind.Identifier);
     const variableName = this.token;
@@ -85,17 +94,25 @@ export class Parser {
 
     this.nextToken();
     this.assert([TokenKind.Identifier, TokenKind.Number]);  // 或者直接赋值、或者接受函数返回值
-    const value = this.parseValue();
+    const variableValue = this.parseValue();
+    const endPos = this.token.end;  // 变量值或者函数调用
 
     this.nextToken();
 
     return {
-      name: variableName,
-      value,
+      VariableDeclaration: {
+        Keyword: keyword,
+        VariableName: variableName,
+        VariableValue: variableValue,
+        offset: {
+          pos: keyword.pos,  // 从 let 左侧开始
+          end: endPos,
+        }
+      },
     };
   }
 
-  private parseFunctionDeclaration() {
+  private parseFunctionDeclaration(): FunctionDeclaration {
     const functionName = this.token;
 
     this.nextToken();
@@ -111,31 +128,50 @@ export class Parser {
     this.nextToken();
     this.assert(TokenKind.leftBrace);
 
-    this.nextToken();
     const functionBody = this.parseFunctionBody();
     this.assert(TokenKind.rightBrace);
+    const endPos = this.token.end;
 
     this.nextToken();
 
     return {
-      name: functionName,
-      parameter: functiontParameter,
-      body: functionBody,
+      FunctionDeclaration: {
+        FunctionName: functionName,
+        FunctionParameter: functiontParameter,
+        FunctionBody: functionBody,
+        offset: {
+          pos: functionName.pos,  // 函数名字位置
+          end: endPos,  // 右花括号位置结束
+        }
+      },
     };
   }
 
   private parseFunctionBody(): FunctionBody {
+    this.assert(TokenKind.leftBrace);
+    const startPos = this.token.pos;
+
+    this.nextToken();
+
     const statements = this.parseStatementList();
     this.assert(TokenKind.Keyword, 'return');
 
     const returnStat = this.parseReturnStatement();
+    this.assert(TokenKind.rightBrace);
+
     return {
       StatementList: statements,
       ReturnStatement: returnStat,
+      offset: {
+        pos: startPos, // 左括号开始位置
+        end: this.token.end,  // 右括号结束位置
+      },
     };
   }
 
   private parseReturnStatement(): ReturnStatement {
+    const keyword = this.token;
+
     this.nextToken();
     this.assert([TokenKind.Identifier, TokenKind.Number]);
     const value = this.token;
@@ -146,9 +182,22 @@ export class Parser {
     switch (this.token.kind) {
       // 如果是右花括号，语句就结束了
       case TokenKind.rightBrace: {
-        return value;
+        return {
+          Keyword: keyword,
+          ReturnValue: {
+            Literal: value,
+            offset: { // 如果直接返回一个值，那就以这个值的 offset 为准
+              pos: value.pos,
+              end: value.end,
+            },
+          },
+          offset: {
+            pos: keyword.pos,
+            end: value.end,
+          }
+        };
       }
-      // 如果是加号，那就再向后取一个 token
+      // 如果是加号，那就再向后取一个 token，获取第二个运算数
       case TokenKind.Plus: {
         this.nextToken();
         this.assert([TokenKind.Identifier, TokenKind.Number]);
@@ -157,50 +206,44 @@ export class Parser {
         this.nextToken();
         this.assert(TokenKind.rightBrace);
         return {
-          PlusExpression: {
-            left: value,
-            right,
+          Keyword: keyword,
+          ReturnValue: {
+            PlusExpression: {
+              Left: value,
+              Right: right,
+              offset: {
+                pos: value.pos,
+                end: right.end,
+              }
+            },
+          },
+          offset: {
+            pos: keyword.pos,
+            end: right.end,
           }
-        };
+        }
+      }
+      default: {
+        throw new Error(`返回值 只能是值或者加法表达式`);
       }
     }
-
-    const plusExpr = this.parsePlusExpression();
-    return plusExpr;
   }
 
-  private parsePlusExpression(): PlusExpression {
-    const left = this.token;
-
-    this.nextToken();
-    this.assert(TokenKind.Plus);
-
-    this.nextToken();
-    this.assert(TokenKind.Identifier);
-    const right = this.token;
-
-    return {
-      PlusExpression: {
-        left,
-        right,
-      },
-    };
-  }
-
-  private parseValue(): Value {
+  private parseValue(): VariableValue {
     switch (this.token.kind) {
       case TokenKind.Number: {
         const number = this.token;
-        return number;
+        return {
+          Literal: number,
+          offset: {
+            pos: number.pos,
+            end: number.end,
+          }
+        };
       }
       case TokenKind.Identifier: {
-        const { name, argument } = this.parseCallExpression();
-        return {
-          CallExpression: {
-            name,
-            argument,
-          }
-        }
+        const callExpr = this.parseCallExpression();
+        return callExpr;
       }
       default: {
         throw new Error('value 只能是 number 或 函数调用');
@@ -208,7 +251,7 @@ export class Parser {
     }
   }
 
-  private parseCallExpression() {
+  private parseCallExpression(): CallExpression {
     this.assert(TokenKind.Identifier);
     const functionName = this.token;
 
@@ -223,8 +266,14 @@ export class Parser {
     this.assert(TokenKind.RightParenthese);
 
     return {
-      name: functionName,
-      argument: functionArgument
+      CallExpression: {
+        FunctionName: functionName,
+        FunctionArgument: functionArgument,
+        offset: {
+          pos: functionName.pos,
+          end: this.token.end,  // 到右小括号位置结束
+        }
+      },
     };
   }
 
