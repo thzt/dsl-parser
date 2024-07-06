@@ -1,4 +1,5 @@
 import type { Token } from "../token";
+import { SymbolTable } from "./semantic";
 
 export interface Offset {
   pos: number;
@@ -12,6 +13,8 @@ export interface AST {
 export interface SourceFile {
   StatementList: Statement[];
   offset: Offset;
+  locals?: SymbolTable;
+  parent?: AST;
 }
 export type Statement = VariableDeclaration | FunctionDeclaration
 export interface VariableDeclaration {
@@ -21,6 +24,7 @@ export interface VariableDeclaration {
     VariableValue: VariableValue;
     offset: Offset;
   };
+  parent?: SourceFile;
 }
 export type VariableValue = Literal | CallExpression;
 export interface Literal {
@@ -41,16 +45,20 @@ export interface FunctionDeclaration {
     FunctionBody: FunctionBody;
     offset: Offset;
   };
+  parent?: SourceFile;
 }
 export interface FunctionBody {
   StatementList: Statement[];
   ReturnStatement: ReturnStatement;
   offset: Offset;
+  parent?: FunctionDeclaration;
+  locals?: SymbolTable;
 }
 export class ReturnStatement {
   Keyword: Token;
   ReturnValue: ReturnValue;
   offset: Offset;
+  parent?: FunctionBody;
 }
 export type ReturnValue = Literal | PlusExpression;
 export interface PlusExpression {
@@ -59,5 +67,6 @@ export interface PlusExpression {
     Right: Token;
     offset: Offset;
   },
+  parent?: ReturnStatement;
 }
 

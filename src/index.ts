@@ -1,4 +1,6 @@
 import { Token, TokenKind, CharacterTypeEnum } from "./token";
+export * from './semantic';
+export * from './search';
 
 import type {
   AST, SourceFile, Statement, FunctionBody, ReturnStatement, VariableValue, CallExpression, VariableDeclaration, FunctionDeclaration,
